@@ -1,0 +1,198 @@
+# 品类分析
+## 神经网络预测未来七天
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity = 'all'
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import Dense, LSTM
+import matplotlib.pyplot as plt
+
+
+file_path = './dates/predict_standard.xlsx'
+sheet_name = 'Sheet1'
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+
+sales_data = df.iloc[:, 1:7]
+scaler = MinMaxScaler()
+scaled_sales_data = scaler.fit_transform(sales_data)
+
+train_size = int(len(scaled_sales_data) * 0.8)
+train_data = scaled_sales_data[:train_size]
+test_data = scaled_sales_data[train_size:]
+
+def create_dataset(data, look_back=7):
+    X, y = [], []
+    for i in range(look_back, len(data)):
+        X.append(data[i - look_back:i])
+        y.append(data[i])
+    return np.array(X), np.array(y)
+
+X_train, y_train = create_dataset(train_data)
+X_test, y_test = create_dataset(test_data)
+
+model = Sequential()
+model.add(LSTM(64, activation='relu', input_shape=(7, 6)))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(6, activation='linear'))
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+
+model.fit(X_train, y_train, epochs=1000, batch_size=164, verbose=2)
+future_sales = []
+last_week_sales = X_test[-1]
+
+for _ in range(7):
+    next_day_sales = model.predict(last_week_sales.reshape(1, 7, 6))
+    future_sales.append(next_day_sales[0])
+    last_week_sales = np.roll(last_week_sales, shift=-1, axis=0)
+    last_week_sales[-1] = next_day_sales[0]
+future_sales = scaler.inverse_transform(np.array(future_sales))
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity = 'all'
+print(future_sales)
+future_df = pd.DataFrame(data=future_sales, columns=sales_data.columns)
+output_file_path = './dates/output_sales_prediction.xlsx'
+with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
+    future_df.to_excel(writer, sheet_name='Predictions', index=False)
+# 绘制销售预测图表
+plt.figure(figsize=(10, 6))
+dates = df['Date'].iloc[train_size + 7:train_size + 7 + len(future_sales)].values
+for i in range(6):
+    plt.plot(dates, test_data[:, i][:len(future_sales)], label=f'real-{i+1}')
+    plt.plot(dates, future_sales[:, i], label=f'predict-{i+1}', linestyle='--')
+plt.xlabel('Date')
+plt.ylabel('Sales')
+plt.legend()
+plt.show()
+
+## LSTM
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
+import matplotlib.pyplot as plt
+
+file_path = './dates/predict_standard.xlsx'
+sheet_name = 'Sheet1'
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+sales_data = df.iloc[:, 1:7]
+scaler = MinMaxScaler()
+scaled_sales_data = scaler.fit_transform(sales_data)
+
+def create_dataset(data, look_back=7):
+    X, y = [], []
+    for i in range(look_back, len(data)):
+        X.append(data[i - look_back:i])
+        y.append(data[i])
+    return np.array(X), np.array(y)
+
+look_back = 7
+X, y = create_dataset(scaled_sales_data, look_back)
+
+train_size = int(len(X) * 0.8)
+X_train, X_test = X[:train_size], X[train_size:]
+y_train, y_test = y[:train_size], y[train_size:]
+
+
+model = Sequential()
+model.add(LSTM(64, activation='relu', input_shape=(look_back, 6)))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(6, activation='linear'))
+model.compile(optimizer='adam', loss='mean_squared_error')
+model.fit(X_train, y_train, epochs=1000, batch_size=164, verbose=2)
+future_sales = []
+last_week_sales = X_test[-1]
+
+for _ in range(7):
+    next_day_sales = model.predict(last_week_sales.reshape(1, look_back, 6))
+    future_sales.append(next_day_sales[0])
+    last_week_sales = np.roll(last_week_sales, shift=-1, axis=0)
+    last_week_sales[-1] = next_day_sales[0]
+future_sales = scaler.inverse_transform(np.array(future_sales))
+
+dates = df['Date'].iloc[look_back:].values
+future_df = pd.DataFrame(data=future_sales, columns=sales_data.columns)
+future_df['Date'] = dates[-7:]
+output_file_path = './dates/output_sales_prediction_category_lstm.xlsx'
+with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
+    future_df.to_excel(writer, sheet_name='Predictions', index=False)
+future_df = pd.DataFrame(data=future_sales, columns=sales_data.columns)
+future_df['Date'] = pd.date_range(start='2023-07-01', periods=7)
+plt.figure(figsize=(12, 6))
+plt.xlim(pd.Timestamp('2023-01-01'), pd.Timestamp('2023-07-07'))
+for i in range(6):
+    plt.plot(df['Date'], scaled_sales_data[:, i], label=f'real-{i+1}')
+    plt.plot(future_df['Date'], future_sales[:, i], label=f'predict-{i+1}', linestyle='--')
+plt.xlabel('Date')
+plt.ylabel('Sales')
+plt.legend()
+plt.show()
+
+# 单品预测
+## LSTM
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
+import matplotlib.pyplot as plt
+
+file_path = './dates/new_data2_day.xlsx'
+sheet_name = 'Sheet1'
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+sales_data = df.iloc[:, 1:247]
+scaler = MinMaxScaler()
+scaled_sales_data = scaler.fit_transform(sales_data)
+def create_dataset(data, look_back=7):
+    X, y = [], []
+    for i in range(look_back, len(data)):
+        X.append(data[i - look_back:i])
+        y.append(data[i])
+    return np.array(X), np.array(y)
+
+look_back = 7
+X, y = create_dataset(scaled_sales_data, look_back)
+train_size = int(len(X) * 0.8)
+X_train, X_test = X[:train_size], X[train_size:]
+y_train, y_test = y[:train_size], y[train_size:]
+
+model = Sequential()
+model.add(LSTM(64, activation='relu', input_shape=(look_back, 246)))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(246, activation='linear'))  # 输出层也要有246个神经元
+model.compile(optimizer='adam', loss='mean_squared_error')
+model.fit(X_train, y_train, epochs=1000, batch_size=164, verbose=2)
+
+future_sales = []
+last_week_sales = X_test[-1]
+
+for _ in range(7):
+    next_day_sales = model.predict(last_week_sales.reshape(1, look_back, 246))
+    future_sales.append(next_day_sales[0])
+    last_week_sales = np.roll(last_week_sales, shift=-1, axis=0)
+    last_week_sales[-1] = next_day_sales[0]
+future_sales = scaler.inverse_transform(np.array(future_sales))
+dates = df['Date'].iloc[look_back:].values
+future_df = pd.DataFrame(data=future_sales, columns=sales_data.columns)
+future_df['Date'] = dates[-7:]
+
+output_file_path = './dates/output_sales_prediction_product_lstm.xlsx'
+with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
+    future_df.to_excel(writer, sheet_name='Predictions', index=False)
+
+
+## 模型检验
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+actual_sales = sales_data.iloc[-7:].values
+rmse = np.sqrt(mean_squared_error(actual_sales, future_sales))
+print(f"Root Mean Squared Error (RMSE): {rmse:.2f}")
+mae = mean_absolute_error(actual_sales, future_sales)
+print(f"Mean Absolute Error (MAE): {mae:.2f}")
+r2 = r2_score(actual_sales, future_sales)
+print(f"R-squared (R2): {r2:.2f}")

@@ -1,0 +1,197 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from statsmodels.stats.diagnostic import acorr_ljungbox
+from statsmodels.graphics.tsaplots import plot_pacf,plot_acf
+from statsmodels.tsa.stattools import adfuller
+
+df=pd.read_excel('C:/Users/Administrator/Desktop/ARIMA.xlsx')
+df.info()
+data=df.copy()
+#不存在缺失值，不需要用移动平均法填充数据
+plt.plot(data['日期'],data['花菜类'].values)
+plt.show()
+
+huacai=data['花菜类']
+#单位根检验（ADF检验）
+print(adfuller(huacai))
+#结果表明花菜类序列0.05显著性水平下平稳
+#白噪声检验
+acorr_ljungbox(huacai, lags = [6, 12],boxpierce=True)
+#结果表明数据0.01显著性水平不是白噪声
+train=huacai.loc[:700]
+test=huacai.loc[701:].reset_index(drop=True)
+model = sm.tsa.arima.ARIMA(train,order=(1,0,3))
+arima_res=model.fit()
+arima_res.summary()
+predict=arima_res.predict(start=test.index[0],end=test.index[len(test)-1])
+plt.plot(test.index,predict,color='blue',label='predict')
+plt.plot(test.index,test,color='red',label='test')
+plt.legend()
+plt.show()
+from sklearn.metrics import r2_score,mean_absolute_error
+mean_absolute_error(test,predict)
+#残差图
+residual=test-predict
+plt.plot(residual,label='residual')
+plt.legend()
+np.mean(residual)
+#残差正态性检验
+import seaborn as sns
+from scipy import stats
+plt.figure(figsize=(10,5))
+ax=plt.subplot(1,2,1)
+sns.distplot(residual,fit=stats.norm)
+ax=plt.subplot(1,2,2)
+res=stats.probplot(residual,plot=plt)
+plt.show()
+#计算R方
+print(r2_score(test,predict))
+#计算ACF 拖尾
+acf=plot_acf(huacai)
+plt.show()
+#PACF 3阶截尾
+pacf=plot_pacf(huacai)
+plt.show()
+'''也可以使用信息准则帮助判断最佳阶数
+trend_evaluate = sm.tsa.arma_order_select_ic(huacai, ic=['aic', 'bic'], trend='n', max_ar=20,max_ma=10)
+print('AIC', trend_evaluate.aic_min_order)
+print('BIC', trend_evaluate.bic_min_order)
+'''
+model = sm.tsa.arima.ARIMA(huacai,order=(1,0,3))
+arima_res=model.fit()
+arima_res.summary()
+test=pd.read_excel('C:/Users/Administrator/Desktop/test.xlsx')
+predict=arima_res.predict(start=test.index[0],end=test.index[6])
+plt.plot(test.index,predict)
+plt.show()
+test['花菜类']=predict
+##
+plt.plot(data['日期'],data['辣椒类'].values)
+plt.show()
+
+lajiao=data['辣椒类']
+#单位根检验（ADF检验）
+print(adfuller(lajiao))
+#结果表明花菜类序列0.05显著性水平下平稳
+#白噪声检验
+acorr_ljungbox(lajiao, lags = [6, 12],boxpierce=True)
+#结果表明数据0.01显著性水平下不是白噪声
+#计算ACF 拖尾
+acf=plot_acf(lajiao)
+plt.show()
+#PACF 3阶截尾
+pacf=plot_pacf(lajiao)
+plt.show()
+
+model = sm.tsa.arima.ARIMA(lajiao,order=(1,0,3))
+arima_res=model.fit()
+arima_res.summary()
+predict=arima_res.predict(start=test.index[0],end=test.index[6])
+plt.plot(test.index,predict)
+plt.show()
+test['辣椒类']=predict
+##
+plt.plot(data['日期'],data['茄类'].values)
+plt.show()
+
+qie=data['茄类']
+#单位根检验（ADF检验）
+print(adfuller(qie))
+#结果表明花菜类序列0.05显著性水平下平稳
+#白噪声检验
+acorr_ljungbox(qie, lags = [6, 12],boxpierce=True)
+#结果表明数据0.01显著性水平下不是白噪声
+#计算ACF 拖尾
+acf=plot_acf(qie)
+plt.show()
+#PACF 3阶截尾
+pacf=plot_pacf(qie)
+plt.show()
+
+
+model = sm.tsa.arima.ARIMA(qie,order=(1,0,3))
+arima_res=model.fit()
+arima_res.summary()
+predict=arima_res.predict(start=test.index[0],end=test.index[6])
+plt.plot(test.index,predict)
+plt.show()
+test['茄类']=predict
+##
+plt.plot(data['日期'],data['食用菌'].values)
+plt.show()
+
+shiyongjun=data['食用菌']
+#单位根检验（ADF检验）
+print(adfuller(shiyongjun))
+#结果表明花菜类序列0.05显著性水平下平稳
+#白噪声检验
+acorr_ljungbox(shiyongjun, lags = [6, 12],boxpierce=True)
+#结果表明数据0.01显著性水平下不是白噪声
+#计算ACF 拖尾
+acf=plot_acf(shiyongjun)
+plt.show()
+#PACF 3阶截尾
+pacf=plot_pacf(shiyongjun)
+plt.show()
+
+model = sm.tsa.arima.ARIMA(shiyongjun,order=(1,0,3))
+arima_res=model.fit()
+arima_res.summary()
+predict=arima_res.predict(start=test.index[0],end=test.index[6])
+plt.plot(test.index,predict)
+plt.show()
+test['食用菌']=predict
+##
+plt.plot(data['日期'],data['水生根茎类'].values)
+plt.show()
+
+shuisheng=data['水生根茎类']
+#单位根检验（ADF检验）
+print(adfuller(shuisheng))
+#结果表明花菜类序列0.05显著性水平下平稳
+#白噪声检验
+acorr_ljungbox(shuisheng, lags = [6, 12],boxpierce=True)
+#结果表明数据0.01显著性水平下不是白噪声
+#计算ACF 拖尾
+acf=plot_acf(shuisheng)
+plt.show()
+#PACF 3阶截尾
+pacf=plot_pacf(shuisheng)
+plt.show()
+
+model = sm.tsa.arima.ARIMA(shuisheng,order=(1,0,3))
+arima_res=model.fit()
+arima_res.summary()
+predict=arima_res.predict(start=test.index[0],end=test.index[6])
+plt.plot(test.index,predict)
+plt.show()
+test['水生根茎类']=predict
+##
+plt.plot(data['日期'],data['花叶类'].values)
+plt.show()
+
+huaye=data['花叶类']
+#单位根检验（ADF检验）
+print(adfuller(huaye))
+#结果表明花叶类序列0.1显著性水平下平稳，不用使用差分进行平稳
+#白噪声检验
+acorr_ljungbox(huaye, lags = [6, 12],boxpierce=True)
+#结果表明数据0.01显著性水平不是白噪声
+#计算ACF 3阶截尾
+acf=plot_acf(huaye)
+plt.show()
+#PACF 3阶截尾
+pacf=plot_pacf(huaye)
+plt.show()
+
+model = sm.tsa.arima.ARIMA(huaye,order=(1,0,3))
+arima_res=model.fit()
+arima_res.summary()
+predict=arima_res.predict(start=test.index[0],end=test.index[6])
+plt.plot(test.index,predict)
+plt.show()
+test['花叶类']=predict
+test.to_excel('C:/Users/Administrator/Desktop/testpredict.xlsx')
+

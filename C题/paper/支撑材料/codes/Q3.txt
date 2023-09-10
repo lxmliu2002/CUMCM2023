@@ -1,0 +1,119 @@
+# LSTM预测7.1销量
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
+
+
+file_path = './dates/0624-0630.xlsx'
+sheet_name = 'Sheet7'
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+sales_data = df.iloc[:, 1:50]
+# print(sales_data)
+scaler = MinMaxScaler()
+scaled_sales_data = scaler.fit_transform(sales_data)
+def create_dataset(data, look_back=49):
+    X, y = [], []
+    for i in range(look_back, len(data)):
+        X.append(data[i - look_back:i])
+        y.append(data[i])
+    return np.array(X), np.array(y)
+look_back = 49
+X, y = create_dataset(scaled_sales_data, look_back)
+train_size = int(len(X) * 0.8)
+X_train, X_test = X[:train_size], X[train_size:]
+y_train, y_test = y[:train_size], y[train_size:]
+model = Sequential()
+model.add(LSTM(64, activation='relu', input_shape=(look_back, 50)))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(50, activation='linear'))
+model.compile(optimizer='adam', loss='mean_squared_error')
+model.fit(X_train, y_train, epochs=100, batch_size=16, verbose=2)
+last_week_sales = X_test[-1]
+next_day_sales = model.predict(last_week_sales.reshape(1, look_back, 50))
+next_day_sales = scaler.inverse_transform(next_day_sales)
+dates = df['Date'].iloc[look_back:].values
+future_df = pd.DataFrame(data=next_day_sales, columns=sales_data.columns)
+future_df['Date'] = dates[-1:]
+output_file_path = './dates/output_0624-0630.xlsx'
+with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
+    future_df.to_excel(writer, sheet_name='Predictions', index=False)
+
+# 遗传算法
+import random
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+from deap import base, creator, tools, algorithms
+
+
+file_path = './dates/Q3_predict.xlsx'
+sheet_name = 'Sheet2'
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+i_values = df['i'].tolist()
+a_values = df['a[i]'].tolist()
+b_values = df['b[i]'].tolist()
+AC_values = df['AC[i]'].tolist()
+initial_K_values = df['K'].tolist()
+initial_S_values = df['S'].tolist()
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMax)
+toolbox = base.Toolbox()
+def generate_Ki():
+    return random.uniform(0, 1)
+def generate_Si():
+    return random.uniform(0,1)  
+
+toolbox.register("individual", tools.initCycle, creator.Individual, (generate_Ki, generate_Si), n=49)
+toolbox.register("initial_K_values", lambda x: x, initial_K_values)
+toolbox.register("initial_S_values", lambda x: x, initial_S_values)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+def evaluate(individual):
+    total_w = 0.0
+    zero_count=individual.count(0)
+    for i in range(49):
+        Ki = individual[i * 2]
+        Si = individual[i * 2 + 1]
+        if not (16<= zero_count<=22):
+            return -float('inf'),
+        # 添加约束条件
+        if not (0 <= Ki < 1) or not ( Si == 0 or Si >= 2.5):
+            return -float('inf'),
+        
+        if AC_values[i] / (1 - Ki) >= (Si - a_values[i]) / b_values[i]:
+            w_i = b_values[i] * (AC_values[i] / (1 - Ki)) ** 2 + a_values[i] * AC_values[i] / (1 - Ki) - Si * AC_values[i]
+        else:
+            w_i = Si * Ki * AC_values[i] / (1 - Ki)
+        total_w += w_i
+    return total_w,
+
+toolbox.register("evaluate", evaluate)
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.1, indpb=0.2)
+toolbox.register("select", tools.selTournament, tournsize=3)
+population = toolbox.population(n=100)
+fitnesses = list(map(toolbox.evaluate, population))
+for ind, fit in zip(population, fitnesses):
+    ind.fitness.values = fit
+crossover_prob = 0.7
+mutation_prob = 0.2
+generations = 10000000
+
+for gen in tqdm(range(generations), desc="Evolving"):
+    offspring = algorithms.varAnd(population, toolbox, cxpb=crossover_prob, mutpb=mutation_prob)
+    fits = toolbox.map(toolbox.evaluate, offspring)
+    for ind, fit in zip(offspring, fits):
+        ind.fitness.values = fit
+    population = toolbox.select(offspring, k=len(population))
+best_individual = tools.selBest(population, k=1)[0]
+best_Ki_values = best_individual[::2]
+best_Si_values = best_individual[1::2]
+best_fitness = best_individual.fitness.values[0]
+print("Best Ki values:", best_Ki_values)
+print("Best Si values:", best_Si_values)
+print("Best Fitness:", best_fitness)
+df = pd.DataFrame(predictions, columns=['Value'])
+output_file_path = './dates/output_Q3_predict.xlsx'
+df.to_excel(output_file_path, index=False)

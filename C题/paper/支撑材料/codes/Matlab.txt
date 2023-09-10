@@ -1,0 +1,11 @@
+num = xlsread('问题一各品类销量描述性统计与皮尔逊相关系数分析.xlsx')
+%% 统计描述
+MIN = min(num); % 每一列的最小值
+MAX = max(num); % 每一列的最大值
+MEAN = mean(num); % 每一列的均值
+MEDIAN = median(num); %每一列的中位数
+SKEWNESS = skewness(num); %每一列的偏度
+KURTOSIS = kurtosis(num); %每一列的峰度
+STD = std(num); % 每一列的标准差
+format short
+RESULT = [MIN;MAX;MEAN;MEDIAN;SKEWNESS;KURTOSIS;STD] %将这些统计量放到一个矩阵中表示

@@ -1,0 +1,295 @@
+# 进退货量相抵，删除相关数据
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity = 'all'
+import pandas as pd
+
+file_path = './dates/name.xlsx'
+sheet_name = 'Sheet1'
+column_name1 = '销量(千克)'
+column_name2 = '销售单价(元/千克)'
+
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+# 标记负值所在的行
+negative_indices = []
+for i in range(len(df) - 1, -1, -1):
+    if df.at[i, column_name1] < 0:
+        negative_indices.append(i)
+# print(negative_indices)
+
+# 删除最近的相反数所在的行
+while len(negative_indices) > 0:
+    i = negative_indices.pop()
+    print(i)
+    j = i - 1  # 前一行索引
+
+    while j >= 0:
+        if j in df.index and df.at[j, column_name1] == -df.at[i, column_name1] and df.at[j, column_name2] == df.at[j, column_name2]:
+            df.drop([i, j], inplace=True)  # 删除这两行
+            break
+        j -= 1
+
+
+
+output_file = './dates/output_name.xlsx'
+df.to_excel(output_file, index=False)
+
+# 将数据标准化处理
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity = 'all'
+import pandas as pd
+
+# 读取Excel文件
+file_path1 = './dates/clustering.xlsx'
+sheet_name = 'Sheet3'
+
+df = pd.read_excel(file_path1, sheet_name=sheet_name)
+
+# 循环遍历每一列并进行Min-Max标准化
+for column in df.columns:
+    # 检查列是否包含数值数据
+    if df[column].dtype in ['int64', 'float64']:
+        # 计算列的最小值和最大值
+        min_value = df[column].min()
+        max_value = df[column].max()
+        
+        # 对列中的每个值进行Min-Max标准化
+        df[column] = (df[column] - min_value) / (max_value - min_value)
+
+
+output_file = 'new_data2_day.xlsx'
+df.to_excel(output_file, index=False)
+
+print("数据已标准化并保存到新的Excel文件。")
+
+# 空值补0
+import pandas as pd
+import string
+
+file_path = './dates/clustering_hour.xlsx'
+sheet_name = 'Sheet1'
+
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+start_row = 2  
+end_row = 14177  
+start_col = 'B'  
+end_col = 'IM'  
+
+# 转换列名为列索引
+def col_to_index(col_name):
+    if len(col_name) == 1:
+        return ord(col_name) - ord('A') + 1
+    else:
+        first_letter, second_letter = col_name[0], col_name[1]
+        return (ord(first_letter) - ord('A') + 1) * 26 + (ord(second_letter) - ord('A') + 1)
+
+start_col_index = col_to_index(start_col)
+end_col_index = col_to_index(end_col)
+
+# 将指定范围内的空单元格替换为零
+for row in range(start_row, end_row + 1):
+    for col in range(start_col_index, end_col_index + 1):
+        cell_value = df.iloc[row - 1, col - 1]
+        if pd.isna(cell_value):
+            df.iloc[row - 1, col - 1] = 0
+
+
+output_file = './dates/clustering_hour_zero.xlsx'
+df.to_excel(output_file, index=False)
+
+# 数据标准化处理
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity = 'all'
+import pandas as pd
+
+
+file_path1 = './dates/clustering_hour_zero.xlsx'
+sheet_name = 'Sheet1'
+
+df = pd.read_excel(file_path1, sheet_name=sheet_name)
+
+# 循环遍历每一列并进行Min-Max标准化
+for column in df.columns:
+    # 检查列是否包含数值数据
+    if df[column].dtype in ['int64', 'float64']:
+        # 计算列的最小值和最大值
+        min_value = df[column].min()
+        max_value = df[column].max()
+        
+        # 对列中的每个值进行Min-Max标准化
+        df[column] = (df[column] - min_value) / (max_value - min_value)
+
+output_file = './dates/output_clustering_hour_zero.xlsx'
+df.to_excel(output_file, index=False)
+
+print("数据已标准化并保存到新的Excel文件。")
+
+# 散布矩阵
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+file_path = './dates/皮尔逊相关系数.xlsx'
+sheet_name = 'Sheet1'
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+# 假设日期列为第一列，品类名称在第一行，从第二列第二行开始是销量数据
+# 将日期列设置为索引，然后去掉品类名称行
+df.set_index('行标签', inplace=True)
+df.columns = df.iloc[0]
+df = df[1:]
+
+# 创建散布矩阵
+sns.set(style="ticks")
+sns.pairplot(df)
+
+# 显示图形
+plt.show()
+
+# FG-Growth算法
+import pandas as pd
+from mlxtend.frequent_patterns import fpgrowth
+from mlxtend.frequent_patterns import association_rules
+
+# 读取包含商品销量的DataFrame
+file_path = './dates/new_data2_day.xlsx'
+sheet_name = 'Sheet4'
+
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+df = df.set_index('Date')  # 将日期列设置为索引
+df = df.applymap(lambda x: 1 if x > 0 else 0)  # 将销量列转换为二进制
+
+# 使用FP-Growth算法来找出频繁项集
+frequent_itemsets = fpgrowth(df, min_support=0.1, use_colnames=True)
+
+# 使用关联规则来找出关联性强的商品对
+rules = association_rules(frequent_itemsets, metric='lift', min_threshold=1.0)
+
+print(rules)
+
+# SAM算法
+import pandas as pd
+from collections import defaultdict
+
+# 读取包含商品销量的DataFrame
+file_path = './dates/new_data2_day.xlsx'
+sheet_name = 'Sheet2'
+
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+df = df.set_index('Date')  # 将日期列设置为索引
+df = df.applymap(lambda x: 1 if x > 0 else 0)  # 将销量列转换为二进制
+
+# 定义SAM算法的最小支持度阈值
+min_support = 0.1
+
+# 扫描数据并计算单项的支持度
+item_support = df.sum() / len(df)
+
+# 初始化频繁一项集
+frequent_itemsets = []
+
+# 遍历每个商品，寻找频繁一项集
+for item, support in item_support.items():
+    if support >= min_support:
+        frequent_itemsets.append([item])
+
+# 从频繁一项集构建频繁二项集
+k = 2
+while True:
+    new_frequent_itemsets = []
+    for i in range(len(frequent_itemsets)):
+        for j in range(i + 1, len(frequent_itemsets)):
+            itemset1 = set(frequent_itemsets[i])
+            itemset2 = set(frequent_itemsets[j])
+            union_itemset = itemset1.union(itemset2)
+            if len(union_itemset) == k:
+                # 计算新项集的支持度
+                support = (df[list(union_itemset)].sum(axis=1) == k).mean()
+                if support >= min_support:
+                    new_frequent_itemsets.append(sorted(list(union_itemset)))
+    if not new_frequent_itemsets:
+        break
+    frequent_itemsets = new_frequent_itemsets
+    k += 1
+
+# 打印频繁项集
+for itemset in frequent_itemsets:
+    print(itemset)
+
+# 谱系图
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 读取Excel表格
+file_path = './dates/new_data2_day.xlsx'
+sheet_name = 'sum'
+df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+# 数据预处理
+df = df.transpose()
+df.columns = df.iloc[0]
+df = df.iloc[1:]
+df.index = df.index.astype(str)
+
+
+plt.figure(figsize=(100, 6))
+
+for column in df.columns:
+    plt.plot(df.index, df[column], label=column)
+
+plt.xlabel('Category')
+plt.ylabel('Sales')
+plt.title('Hierarchical Clustering Dendrogram')
+plt.legend(df.columns)
+plt.grid(True)
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# 聚类层次分析谱系图
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import linkage, dendrogram
+
+file_path = './dates/new_data2_day.xlsx'
+sheet_name = 'Sheet2'
+data = pd.read_excel(file_path, sheet_name=sheet_name)
+
+data.set_index('Category', inplace=True)
+
+# 使用层次聚类方法进行聚类
+linkage_matrix = linkage(data, method='ward')
+
+plt.figure(figsize=(3, 20))
+dendrogram(linkage_matrix, labels=data.index, orientation='right')
+plt.title('Hierarchical Clustering Dendrogram')
+plt.ylabel('Categories')
+plt.xlabel('Sales')
+plt.tight_layout()
+plt.show()
+
+# 皮尔逊相关系数热力图
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+matrix_data = [
+    [1, 0.627113, 0.550916, 0.311608, 0.522983, 0.542215],
+    [0.627113, 1, 0.659375, 0.257425, 0.63078, 0.561058],
+    [0.550916, 0.659375, 1, 0.273339, 0.687516, 0.614262],
+    [0.311608, 0.257425, 0.273339, 1, 0.119841, 0.074392],
+    [0.522983, 0.63078, 0.687516, 0.119841, 1, 0.670054],
+    [0.542215, 0.561058, 0.614262, 0.074392, 0.670054,1],
+]
+
+sns.set(style="whitegrid")
+cmap = "coolwarm_r"
+plt.figure(figsize=(8, 6))
+sns.heatmap(matrix_data, annot=True, fmt=".6f")
+plt.show()
+
+
